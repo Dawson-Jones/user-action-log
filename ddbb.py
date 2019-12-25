@@ -16,9 +16,10 @@ def query_db(start_time=None, end_time=None, pd_no=None):
         context['el_no'] = pd_no
 
     res = user_log_collection.find(context, {'_id': 0})
-    return res, len(list(res))
+    num = user_log_collection.count_documents(context)
+    return res, num
 
 
 if __name__ == '__main__':
-    res = query_db()
+    res, _ = query_db()
     print(res[0])

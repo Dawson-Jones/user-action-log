@@ -19,7 +19,7 @@ class LogGui(QWidget, Ui_Form):
         self.ed_le.setText(str_time)
         self.st_le.get_focus_signel.connect(lambda: self.set_cur_obj(self.st_le))
         self.ed_le.get_focus_signel.connect(lambda: self.set_cur_obj(self.ed_le))
-        self.pd_le.get_focus_signel.connect(lambda: self.set_cur_obj())
+        self.pd_le.get_focus_signel.connect(self.set_cur_obj)
 
     def fill_date(self):
         if not self.current_le:
@@ -39,8 +39,10 @@ class LogGui(QWidget, Ui_Form):
             start_time = time.mktime(time.strptime(start_time, '%Y-%m-%d'))
         if end_time:
             end_time = time.mktime(time.strptime(end_time, '%Y-%m-%d')) + HOUR_S * DAY_H
-        if start_time > end_time:
+
+        if all([start_time, end_time]) and start_time >= end_time:
             QMessageBox.information(self, 'Tips', 'wrong time information', QMessageBox.Ok)
+            return
 
         res, num = query_db(start_time, end_time, pd_no)
         # [print(r) for r in res]
