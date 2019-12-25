@@ -85,7 +85,7 @@ class Ui_Form(object):
         self.label_3.setStyleSheet("font: 16pt \"Sans Serif\";")
         self.label_3.setObjectName("label_3")
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label_3)
-        self.pd_le = QtWidgets.QLineEdit(self.widget)
+        self.pd_le = ReWriteLe(self.widget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)

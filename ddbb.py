@@ -12,16 +12,13 @@ def query_db(start_time=None, end_time=None, pd_no=None):
         if context.get('time') is None:
             context['time'] = dict()
         context['time']['$lte'] = end_time
-
     if pd_no:
         context['el_no'] = pd_no
 
     res = user_log_collection.find(context, {'_id': 0})
-
-    return res
+    return res, len(list(res))
 
 
 if __name__ == '__main__':
     res = query_db()
     print(res[0])
-

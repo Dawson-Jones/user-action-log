@@ -19,15 +19,15 @@ class LogGui(QWidget, Ui_Form):
         self.ed_le.setText(str_time)
         self.st_le.get_focus_signel.connect(lambda: self.set_cur_obj(self.st_le))
         self.ed_le.get_focus_signel.connect(lambda: self.set_cur_obj(self.ed_le))
+        self.pd_le.get_focus_signel.connect(lambda: self.set_cur_obj())
 
     def fill_date(self):
         if not self.current_le:
             return
         date = self.calendarWidget.selectedDate()
         self.current_le.setText(date.toString('yyyy-MM-dd'))
-        self.current_le = None
 
-    def set_cur_obj(self, cur_obj):
+    def set_cur_obj(self, cur_obj=None):
         self.current_le = cur_obj
 
     def gen_csv(self):
@@ -42,9 +42,9 @@ class LogGui(QWidget, Ui_Form):
         if start_time > end_time:
             QMessageBox.information(self, 'Tips', 'wrong time information', QMessageBox.Ok)
 
-        res = query_db(start_time, end_time, pd_no)
+        res, num = query_db(start_time, end_time, pd_no)
         # [print(r) for r in res]
-        if not res:
+        if not num:
             QMessageBox.information(self, '', 'Nobody operated during this period', QMessageBox.Ok)
             return
         res = save_file(res)
