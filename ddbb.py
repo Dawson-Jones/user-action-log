@@ -1,5 +1,3 @@
-import csv
-import time
 from base import user_log_collection
 
 
