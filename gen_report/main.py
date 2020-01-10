@@ -5,7 +5,7 @@ from gen_csv import write_file
 
 
 def main(hours):
-    response = requests.get('http://127.0.0.1:5000/el_panel/find', params={"hours": hours})
+    response = requests.get('http://127.0.0.1:5000/el_panel/report', params={"hours": hours})
 
     content = response.content.decode()
 
@@ -19,13 +19,13 @@ def main(hours):
     csv_data = [
         [
             '组件条码', '组件过站时间', 'AI 判定结果', 'EL 判定结果', 'AP 判定结果', '扫码机台',
-            '不良原因', '不良位置', '人工删减', '单一电池隐裂数', '组件测试次数'
+            '组件测试次数', '不良原因', '不良位置', '人工删减', '单一电池隐裂数'
         ]
     ]
 
     for data in origin_data.get('msg'):
         filed = list()
-        if data.get('barcode') == '0':
+        if (not data.get('barcode')) or data['barcode'] == '0':
             continue
         filed.append(data['barcode'])
         filed.append(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(data['create_time'])))
@@ -39,6 +39,7 @@ def main(hours):
                 assert len(filed) == 4
         filed.append(data['ap_result'])  # ap 判定结果
         filed.append(data['el_no'])  # 扫码机台
+        filed.append(data['times_of_storage'])  # 组件测试次数
 
         # 不良原因 和 不良位置
         many_cracks = dict()
@@ -47,6 +48,7 @@ def main(hours):
             filed.append('N/A')
             filed.append('N/A')  # 人工删减
             filed.append('N/A')  # 单一电池隐裂数目
+            csv_data.append(filed)
         else:
             for defect in data['defects']:
                 if defect["by"] != 'AI':
@@ -54,27 +56,18 @@ def main(hours):
                 form = defect['type']
                 position = defect['position']["c"]
                 deleted = 'Y' if defect["status"] == 'true' else 'N'
-                if not many_cracks.get(f'{form}#{position}#{deleted}'):
-                    many_cracks[f'{form}#{position}#{deleted}'] = 0
-                many_cracks[f'{form}#{position}#{deleted}'] += 1
+                key = f'{form}#{position}#{deleted}'
+                if not many_cracks.get(key):
+                    many_cracks[key] = 0
+                many_cracks[key] += 1
 
-        char_lists = list()
-        for key, value in many_cracks.items():
-            char_li = key.split('#')
-            print("#######", char_li)
-            char_li.append(value)
-            print("!!!!!", char_li)
-            if len(filed) == 6:
-                filed += char_li
-                print("@@@@@@@@", filed)
-            else:
-                char_li = ['', '', '', '', '', ''] + char_li
-                char_lists.append(char_li)
-
-        filed.append(data['times_of_storage'])  # 组件测试次数
-        csv_data.append(filed)
-        for i in char_lists:
-            csv_data.append(i)
+            for key, value in many_cracks.items():
+                char_li = key.split('#')
+                if char_li[0] == 'cr':
+                    char_li.append(value)
+                filed_temp = filed[:]
+                filed_temp += char_li
+                csv_data.append(filed_temp)
 
     write_file(csv_data)
     print('OK')
