@@ -40,34 +40,41 @@ def main(hours):
         filed.append(data['ap_result'])  # ap 判定结果
         filed.append(data['el_no'])  # 扫码机台
 
-        other_lists = list()
         # 不良原因 和 不良位置
+        many_cracks = dict()
         if not data['defects']:
-            filed.append('N/A')
+            filed.append('N/A')  # 不良原因
             filed.append('N/A')
             filed.append('N/A')  # 人工删减
             filed.append('N/A')  # 单一电池隐裂数目
         else:
             for defect in data['defects']:
-                if defect["by"] == 'AI':
-                    if len(filed) == 6:
-                        filed.append(defect['type'])
-                        filed.append(defect['position']["c"])
-                        filed.append('Y' if defect["status"] == 'true' else 'N')
-                        if defect["type"] == "cr":
+                if defect["by"] != 'AI':
+                    continue
+                form = defect['type']
+                position = defect['position']["c"]
+                deleted = 'Y' if defect["status"] == 'true' else 'N'
+                if not many_cracks.get(f'{form}#{position}#{deleted}'):
+                    many_cracks[f'{form}#{position}#{deleted}'] = 0
+                many_cracks[f'{form}#{position}#{deleted}'] += 1
 
-                    else:
-                        other_list = ['', '', '', '', '', '']
-                        other_list.append(defect['type'])
-                        other_list.append(defect['position']["c"])
-                        other_list.append('Y' if defect["status"] == 'true' else 'N')
-                        other_lists.append(other_list)
+        char_lists = list()
+        for key, value in many_cracks.items():
+            char_li = key.split('#')
+            print("#######", char_li)
+            char_li.append(value)
+            print("!!!!!", char_li)
+            if len(filed) == 6:
+                filed += char_li
+                print("@@@@@@@@", filed)
+            else:
+                char_li = ['', '', '', '', '', ''] + char_li
+                char_lists.append(char_li)
 
-        filed.append(data['times_of_storage'])
-
+        filed.append(data['times_of_storage'])  # 组件测试次数
         csv_data.append(filed)
-        for li in other_lists:
-            csv_data.append(li)
+        for i in char_lists:
+            csv_data.append(i)
 
     write_file(csv_data)
     print('OK')
