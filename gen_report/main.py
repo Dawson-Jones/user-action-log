@@ -40,9 +40,13 @@ def main(hours):
         filed.append(data['ap_result'])  # ap 判定结果
         filed.append(data['el_no'])  # 扫码机台
         filed.append(data['times_of_storage'])  # 组件测试次数
+        # --------------------------------------------------> 不变
 
+        filed_res = filed[:]
         # 不良原因 和 不良位置
         many_cracks = dict()
+        many_cracks_op = dict()
+        ai_position = list()
         if not data['defects']:
             filed.append('N/A')  # 不良原因
             filed.append('N/A')
@@ -51,7 +55,20 @@ def main(hours):
             csv_data.append(filed)
         else:
             for defect in data['defects']:
-                if defect["by"] != 'AI':
+                if defect['by'] == 'AI':
+                    ai_position.append(defect['position']['c'])
+
+            print(ai_position)
+            for defect in data['defects']:
+                if defect["by"] == 'OP' and defect['position']['c'] not in ai_position:
+                    form = defect['type']
+                    position = defect['position']["c"]
+                    key = f'{form}#{position}'
+                    if not many_cracks_op.get(key):
+                        many_cracks_op[key] = 0
+                    many_cracks_op[key] += 1
+
+                if defect['by'] != 'AI':
                     continue
                 form = defect['type']
                 position = defect['position']["c"]
@@ -69,6 +86,28 @@ def main(hours):
                     char_li.append('N/A')
                 filed_temp = filed[:]
                 filed_temp += char_li
+                csv_data.append(filed_temp)
+
+            for key, value in many_cracks_op.items():
+                char_li = key.split('#')
+                if char_li[0] == 'cr':
+                    char_li.append('N/A')
+                    char_li.append(value)
+                else:
+                    char_li.append('N/A')
+                    char_li.append('N/A')
+                filed_temp = filed[:]
+                filed_temp += char_li
+                csv_data.append(filed_temp)
+
+        # 外观缺陷
+        for key, value in data['ap_defects'].items():
+            if value:
+                filed_temp = filed_res[:]
+                filed_temp.append(key)
+                filed_temp.append(value)
+                filed_temp.append('N/A')
+                filed_temp.append('N/A')
                 csv_data.append(filed_temp)
 
     write_file(csv_data)
