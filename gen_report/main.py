@@ -63,8 +63,7 @@ def main(hours):
 
             for key, value in many_cracks.items():
                 char_li = key.split('#')
-                if char_li[0] == 'cr':
-                    char_li.append(value)
+                char_li.append(value)
                 filed_temp = filed[:]
                 filed_temp += char_li
                 csv_data.append(filed_temp)
