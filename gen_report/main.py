@@ -4,6 +4,15 @@ import json
 from gen_csv import write_file
 
 
+def combine_list(li: list, *args) -> list:
+    for ele in args:
+        if isinstance(ele, (list, tuple)):
+            li += ele
+        else:
+            li.append(ele)
+    return li
+
+
 def main(hours):
     response = requests.get('http://127.0.0.1:5000/el_panel/report', params={"hours": hours})
 
@@ -48,17 +57,16 @@ def main(hours):
         many_cracks_op = dict()
         ai_position = list()
         if not data['defects']:
-            filed.append('N/A')  # 不良原因
-            filed.append('N/A')
-            filed.append('N/A')  # 人工删减
-            filed.append('N/A')  # 单一电池隐裂数目
-            csv_data.append(filed)
+            li = combine_list(filed, 'N/A', 'N/A', 'N/A', 'N/A')
+            # filed.append('N/A')  # 不良原因
+            # filed.append('N/A')
+            # filed.append('N/A')  # 人工删减
+            # filed.append('N/A')  # 单一电池隐裂数目
+            csv_data.append(li)
         else:
             for defect in data['defects']:
                 if defect['by'] == 'AI':
                     ai_position.append(defect['position']['c'])
-
-            print(ai_position)
             for defect in data['defects']:
                 if defect["by"] == 'OP' and defect['position']['c'] not in ai_position:
                     form = defect['type']
@@ -104,15 +112,12 @@ def main(hours):
         for key, value in data['ap_defects'].items():
             if value:
                 filed_temp = filed_res[:]
-                filed_temp.append(key)
-                filed_temp.append(value)
-                filed_temp.append('N/A')
-                filed_temp.append('N/A')
-                csv_data.append(filed_temp)
+                li = combine_list(filed_temp, key, value, 'N/A', 'N/A')
+                csv_data.append(li)
 
     write_file(csv_data)
     print('OK')
 
 
 if __name__ == '__main__':
-    main(48)
+    main(88)
