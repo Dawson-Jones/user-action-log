@@ -76,7 +76,7 @@ def main(hours):
 
     csv_data = [
         [
-            '组件条码', '组件拍摄时间', 'AI 判定结果', 'EL 判定结果', '外观判定结果', '扫码机台',
+            '组件条码', '组件拍摄时间', '拍摄时间范围', 'AI 判定结果', 'EL 判定结果', '外观判定结果', '扫码机台',
             '组件测试次数', '不良原因', '不良位置', '人工删减', '单一电池隐裂数'
         ]
     ]
@@ -87,15 +87,22 @@ def main(hours):
         if (not data.get('barcode')) or data['barcode'] == '0':
             continue
         filed.append(data['barcode'])
-        filed.append(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(data['create_time'])))
+        local_time = time.localtime(data['create_time'])
+        filed.append(time.strftime("%Y-%m-%d %H:%M:%S", local_time))
+        y_m_d = time.strftime("%Y-%m-%d", local_time)
+        hour = local_time.tm_hour
+        if hour % 2 == 1:
+            filed.append('%s %02d:00-%d:00' % (y_m_d, hour - 1, hour + 1))
+        else:
+            filed.append('%s %02d:00-%d:00' % (y_m_d, hour, hour + 2))
         judge_res = data['status']
         for i in judge_res:
             if i['by'] == 'AI':
                 filed.append(i['result'])
-                assert len(filed) == 3
+                assert len(filed) == 4
             if i['by'] == 'OP':
                 filed.append(i['result'])
-                assert len(filed) == 4
+                assert len(filed) == 5
         filed.append(data['ap_result'])  # ap 判定结果
         el_no = data['el_no']
         filed.append(el_no)  # 扫码机台
@@ -180,5 +187,5 @@ def main(hours):
 
 
 if __name__ == '__main__':
-    main(88)
+    main(200)
     # load_config()
