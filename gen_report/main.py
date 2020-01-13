@@ -1,4 +1,5 @@
 import time
+import yaml
 import requests
 import json
 from gen_csv import write_file
@@ -11,6 +12,54 @@ def combine_list(li: list, *args) -> list:
         else:
             li.append(ele)
     return li
+
+
+def convert_coord(flag: bool, position: str, amount: int):
+    """convert coordinate yc to mes
+
+    flag: True -> el_no belong to ['1', '2', '3']
+    position: coordinate string like "1 2" split with space
+    amount: how many cells in whole panel
+
+    return: a correct coordinate in mes
+    """
+    coord_x, coord_y = position.split()
+    if flag:
+        position = ' '.join([str(7 - int(coord_x)), coord_y])
+    else:
+        temp_num = amount / 6 + 1
+        position = ' '.join([coord_x, str(temp_num - int(coord_y))])
+
+    return position
+
+
+def load_config():
+    # with open('info_map.yaml') as f:
+    #     info_map = yaml.load(f, Loader=yaml.Loader)
+
+    info_map = {
+        'EL_CODE': {'cr': 'NG隐裂',
+                    'mr': 'NG混档',
+                    'bc': 'NG失效',
+                    'cs': 'NG虚焊',
+                    'br': 'NG破片',
+                    'bb': 'NG断栅',
+                    'Black_Edge_shadow': 'NG黑边',
+                    'other': 'NG其他'},
+        'VI_CODE': {'spacing between cell or string NG': '串_片间距',
+                    'Membrane migration': '膜偏',
+                    'string dislocation': '错位',
+                    'foreign matter': '异物',
+                    'VI broken cell': '外观破片',
+                    'barcode NG': '条码贴反',
+                    'Ribbon excess': '焊带未剪',
+                    'VI others': '外观其他',
+                    'Ribbon migration': '焊带偏移',
+                    'color difference': '色差',
+                    'creepage distance': '隔离不到位'}
+    }
+
+    return info_map
 
 
 def main(hours):
@@ -27,10 +76,11 @@ def main(hours):
 
     csv_data = [
         [
-            '组件条码', '组件过站时间', 'AI 判定结果', 'EL 判定结果', 'AP 判定结果', '扫码机台',
+            '组件条码', '组件拍摄时间', 'AI 判定结果', 'EL 判定结果', '外观判定结果', '扫码机台',
             '组件测试次数', '不良原因', '不良位置', '人工删减', '单一电池隐裂数'
         ]
     ]
+    info_map = load_config()
 
     for data in origin_data.get('msg'):
         filed = list()
@@ -47,10 +97,15 @@ def main(hours):
                 filed.append(i['result'])
                 assert len(filed) == 4
         filed.append(data['ap_result'])  # ap 判定结果
-        filed.append(data['el_no'])  # 扫码机台
+        el_no = data['el_no']
+        filed.append(el_no)  # 扫码机台
         filed.append(data['times_of_storage'])  # 组件测试次数
+
         # --------------------------------------------------> 不变
 
+        el_no_series = el_no[-1]
+        cell_amount = data['cell_amount']
+        flag = True if el_no_series in ['1', '2', '3'] else False
         filed_res = filed[:]
         # 不良原因 和 不良位置
         many_cracks = dict()
@@ -63,57 +118,62 @@ def main(hours):
             # filed.append('N/A')  # 人工删减
             # filed.append('N/A')  # 单一电池隐裂数目
             csv_data.append(li)
-        else:
-            for defect in data['defects']:
-                if defect['by'] == 'AI':
-                    ai_position.append(defect['position']['c'])
-            for defect in data['defects']:
-                if defect["by"] == 'OP' and defect['position']['c'] not in ai_position:
-                    form = defect['type']
-                    position = defect['position']["c"]
-                    key = f'{form}#{position}'
-                    if not many_cracks_op.get(key):
-                        many_cracks_op[key] = 0
-                    many_cracks_op[key] += 1
+            continue
 
-                if defect['by'] != 'AI':
-                    continue
+        for defect in data['defects']:
+            if defect['by'] == 'AI':
+                ai_position.append(defect['position']['c'])
+        for defect in data['defects']:
+            if defect["by"] == 'OP' and defect['position']['c'] not in ai_position:
                 form = defect['type']
+                form = info_map['EL_CODE'][form]
                 position = defect['position']["c"]
-                deleted = 'Y' if defect["status"] == 'true' else 'N'
-                key = f'{form}#{position}#{deleted}'
-                if not many_cracks.get(key):
-                    many_cracks[key] = 0
-                many_cracks[key] += 1
+                key = f'{form}#{position}'
+                if not many_cracks_op.get(key):
+                    many_cracks_op[key] = 0
+                many_cracks_op[key] += 1
 
-            for key, value in many_cracks.items():
-                char_li = key.split('#')
-                if char_li[0] == 'cr':
-                    char_li.append(value)
-                else:
-                    char_li.append('N/A')
-                filed_temp = filed[:]
-                filed_temp += char_li
-                csv_data.append(filed_temp)
+            if defect['by'] != 'AI':
+                continue
+            form = defect['type']
+            form = info_map['EL_CODE'][form]
+            position = defect['position']["c"]
+            position = convert_coord(flag, position, cell_amount)
+            deleted = 'Y' if defect["status"] == 'true' else 'N'
+            key = f'{form}#{position}#{deleted}'
+            if not many_cracks.get(key):
+                many_cracks[key] = 0
+            many_cracks[key] += 1
 
-            for key, value in many_cracks_op.items():
-                char_li = key.split('#')
-                if char_li[0] == 'cr':
-                    char_li.append('N/A')
-                    char_li.append(value)
-                else:
-                    char_li.append('N/A')
-                    char_li.append('N/A')
-                filed_temp = filed[:]
-                filed_temp += char_li
-                csv_data.append(filed_temp)
+        for key, value in many_cracks.items():
+            char_li = key.split('#')
+            if char_li[0] == 'NG隐裂':
+                char_li.append(value)
+            else:
+                char_li.append('N/A')
+            filed_temp = filed[:]
+            filed_temp += char_li
+            csv_data.append(filed_temp)
+
+        for key, value in many_cracks_op.items():
+            char_li = key.split('#')
+            if char_li[0] == 'NG隐裂':
+                char_li.append('N/A')
+                char_li.append(value)
+            else:
+                char_li.append('N/A')
+                char_li.append('N/A')
+            filed_temp = filed[:]
+            filed_temp += char_li
+            csv_data.append(filed_temp)
 
         # 外观缺陷
-        for key, value in data['ap_defects'].items():
-            if value:
-                filed_temp = filed_res[:]
-                li = combine_list(filed_temp, key, value, 'N/A', 'N/A')
-                csv_data.append(li)
+        for key, values in data['ap_defects'].items():
+            if values:
+                for value in values:
+                    filed_temp = filed_res[:]
+                    li = combine_list(filed_temp, info_map["VI_CODE"][key], value, 'N/A', 'N/A')
+                    csv_data.append(li)
 
     write_file(csv_data)
     print('OK')
@@ -121,3 +181,4 @@ def main(hours):
 
 if __name__ == '__main__':
     main(88)
+    # load_config()
