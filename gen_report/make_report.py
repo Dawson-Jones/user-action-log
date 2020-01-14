@@ -62,17 +62,17 @@ def load_config():
     return info_map
 
 
-def main(hours):
-    response = requests.get('http://127.0.0.1:5000/el_panel/report', params={"hours": hours})
+def make_report(st, et, st_str, et_str):
+    response = requests.get('http://192.168.1.4:8091/report', params={"start_time": st, 'end_time': et})
 
     content = response.content.decode()
+    if response.status_code != 200:
+        return False
 
     origin_data: dict = json.loads(content)
-    data_list = origin_data.get("msg")
 
-    if origin_data.get("resno") != '0':
-        print(data_list)
-        return
+    if origin_data.get("errno") != '0':
+        return False
 
     csv_data = [
         [
@@ -174,7 +174,7 @@ def main(hours):
             filed_temp += char_li
             csv_data.append(filed_temp)
 
-        # 外观缺陷
+        # appearance defect
         for key, values in data['ap_defects'].items():
             if values:
                 for value in values:
@@ -182,10 +182,11 @@ def main(hours):
                     li = combine_list(filed_temp, info_map["VI_CODE"][key], value, 'N/A', 'N/A')
                     csv_data.append(li)
 
-    write_file(csv_data)
-    print('OK')
+    write_file(csv_data, st_str + ' ' + et_str)
+
+    return True
 
 
 if __name__ == '__main__':
-    main(200)
+    make_report('2019-8-31', '2020-2-2')
     # load_config()

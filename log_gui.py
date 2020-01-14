@@ -1,8 +1,6 @@
 import time
 from PyQt5.Qt import *
 from resource.action_log import Ui_Form
-from ddbb import query_db
-from gen_csv import save_file
 
 HOUR_S = 3600
 DAY_H = 24
@@ -10,6 +8,7 @@ DAY_H = 24
 
 class LogGui(QWidget, Ui_Form):
     current_le = None
+    send_signal = pyqtSignal(float, float, str, str)
 
     def __init__(self):
         super().__init__()
@@ -19,7 +18,6 @@ class LogGui(QWidget, Ui_Form):
         self.ed_le.setText(str_time)
         self.st_le.get_focus_signel.connect(lambda: self.set_cur_obj(self.st_le))
         self.ed_le.get_focus_signel.connect(lambda: self.set_cur_obj(self.ed_le))
-        self.pd_le.get_focus_signel.connect(self.set_cur_obj)
 
     def fill_date(self):
         if not self.current_le:
@@ -31,27 +29,31 @@ class LogGui(QWidget, Ui_Form):
         self.current_le = cur_obj
 
     def gen_csv(self):
-        start_time = self.st_le.text()
-        end_time = self.ed_le.text()
-        pd_no = self.pd_le.text()
+        start_time_str = self.st_le.text()
+        end_time_str = self.ed_le.text()
 
-        if start_time:
-            start_time = time.mktime(time.strptime(start_time, '%Y-%m-%d'))
-        if end_time:
-            end_time = time.mktime(time.strptime(end_time, '%Y-%m-%d')) + HOUR_S * DAY_H
-
-        if all([start_time, end_time]) and start_time >= end_time:
+        if start_time_str:
+            try:
+                start_time = time.mktime(time.strptime(start_time_str, '%Y-%m-%d'))
+            except Exception:
+                self.gen_failed()
+        if end_time_str:
+            try:
+                end_time = time.mktime(time.strptime(end_time_str, '%Y-%m-%d')) + HOUR_S * DAY_H
+            except Exception:
+                self.gen_failed()
+        if all([start_time_str, end_time_str]) and start_time >= end_time:
             QMessageBox.information(self, 'Tips', 'wrong time information', QMessageBox.Ok)
             return
 
-        res, num = query_db(start_time, end_time, pd_no)
-        # [print(r) for r in res]
-        if not num:
-            QMessageBox.information(self, '', 'Nobody operated during this period', QMessageBox.Ok)
-            return
-        res = save_file(res)
-        if res:
-            QMessageBox.information(self, '', 'generate successful', QMessageBox.Ok)
+        # res, num = query_db(start_time, end_time, pd_no)
+        self.send_signal.emit(start_time, end_time, start_time_str, end_time_str)
+
+    def gen_success(self):
+        QMessageBox.information(self, '', 'generate successful', QMessageBox.Ok)
+
+    def gen_failed(self):
+        QMessageBox.information(self, '', '失败', QMessageBox.Ok)
 
 
 if __name__ == '__main__':
