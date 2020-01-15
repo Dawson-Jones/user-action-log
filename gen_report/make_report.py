@@ -63,7 +63,10 @@ def load_config():
 
 
 def make_report(st, et, st_str, et_str):
-    response = requests.get('http://192.168.1.4:8091/report', params={"start_time": st, 'end_time': et})
+    try:
+        response = requests.get('http://192.168.1.4:8091/report', params={"start_time": st, 'end_time': et})
+    except:
+        return False
 
     content = response.content.decode()
     if response.status_code != 200:
@@ -107,6 +110,8 @@ def make_report(st, et, st_str, et_str):
         el_no = data['el_no']
         filed.append(el_no)  # 扫码机台
         filed.append(data['times_of_storage'])  # 组件测试次数
+        filed.append(data.get('mes_res') if data.get('mes_res') else '暂无')
+        filed.append(data.get('stack_equipment') if data.get('stack_equipment') else '暂无')
 
         # --------------------------------------------------> 不变
 
