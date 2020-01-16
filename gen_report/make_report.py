@@ -64,7 +64,7 @@ def load_config():
 
 def make_report(st, et, st_str, et_str):
     try:
-        response = requests.get('http://192.168.1.4:8091/report', params={"start_time": st, 'end_time': et})
+        response = requests.get('http://192.168.1.15:5000/report', params={"start_time": st, 'end_time': et})
     except:
         return False
 
@@ -80,7 +80,7 @@ def make_report(st, et, st_str, et_str):
     csv_data = [
         [
             '组件条码', '组件拍摄时间', '拍摄时间范围', 'AI 判定结果', 'EL 判定结果', '外观判定结果', '扫码机台',
-            '组件测试次数', '不良原因', '不良位置', '人工删减', '单一电池隐裂数'
+            '组件测试次数', 'mes 结果', '层叠线信息', '不良原因', '不良位置', '人工删减', '单一电池隐裂数'
         ]
     ]
     info_map = load_config()
