@@ -31,6 +31,7 @@ class LogGui(QWidget, Ui_Form):
     def gen_csv(self):
         start_time_str = self.st_le.text()
         end_time_str = self.ed_le.text()
+        self.gen_btn.setDisabled(True)
 
         if start_time_str:
             try:
