@@ -1,5 +1,3 @@
-import time
-import yaml
 import requests
 import json
 from gen_csv import write_file
@@ -62,136 +60,160 @@ def load_config():
     return info_map
 
 
-def make_report(st, et, st_str, et_str):
+def send_http(url, st, et):
     try:
-        response = requests.get('http://192.168.1.15:5000/report', params={"start_time": st, 'end_time': et})
+        response = requests.get('http://{}:5000/report'.format(url), params={"start_time": st, 'end_time': et})
     except:
         return False
-
-    content = response.content.decode()
     if response.status_code != 200:
         return False
 
+    content = response.content.decode()
     origin_data: dict = json.loads(content)
 
     if origin_data.get("errno") != '0':
         return False
+    return origin_data.get('msg')
 
-    csv_data = [
-        [
-            '组件条码', '组件拍摄时间', '拍摄时间范围', 'AI 判定结果', 'EL 判定结果', '外观判定结果', '扫码机台',
-            '组件测试次数', 'mes 结果', '层叠线信息', '不良原因', '不良位置', '人工删减', '单一电池隐裂数'
-        ]
-    ]
-    info_map = load_config()
 
-    for data in origin_data.get('msg'):
-        filed = list()
-        if (not data.get('barcode')) or data['barcode'] == '0':
-            continue
-        filed.append(data['barcode'])
-        local_time = time.localtime(data['create_time'])
-        filed.append(time.strftime("%Y-%m-%d %H:%M:%S", local_time))
-        y_m_d = time.strftime("%Y-%m-%d", local_time)
-        hour = local_time.tm_hour
-        if hour % 2 == 1:
-            filed.append('%s %02d:00-%d:00' % (y_m_d, hour - 1, hour + 1))
-        else:
-            filed.append('%s %02d:00-%d:00' % (y_m_d, hour, hour + 2))
-        judge_res = data['status']
-        for i in judge_res:
-            if i['by'] == 'AI':
-                filed.append(i['result'])
-                assert len(filed) == 4
-            if i['by'] == 'OP':
-                filed.append(i['result'])
-                assert len(filed) == 5
-        filed.append(data['ap_result'])  # ap 判定结果
-        el_no = data['el_no']
-        filed.append(el_no)  # 扫码机台
-        filed.append(data['times_of_storage'])  # 组件测试次数
-        filed.append(data.get('mes_res') if data.get('mes_res') else '暂无')
-        filed.append(data.get('stack_equipment') if data.get('stack_equipment') else '暂无')
+# def make_report(st, et, st_str, et_str):
+#     try:
+#         response = requests.get('http://192.168.1.4:8091/report', params={"start_time": st, 'end_time': et})
+#         # response = requests.get('http://192.168.1.15:5000/report', params={"start_time": st, 'end_time': et})
+#     except:
+#         return False
+#
+#     content = response.content.decode()
+#     if response.status_code != 200:
+#         return False
+#
+#     origin_data: dict = json.loads(content)
+#
+#     if origin_data.get("errno") != '0':
+#         return False
+#
+#     csv_data = [
+#         [
+#             '组件条码', '组件拍摄时间', '拍摄时间范围', 'AI 判定结果', 'EL 判定结果', '外观判定结果', '扫码机台',
+#             '组件测试次数', 'mes 结果', '层叠线信息', '不良原因', '不良位置', '人工删减', '单一电池隐裂数'
+#         ]
+#     ]
+#     info_map = load_config()
+#
+#     for data in origin_data.get('msg'):
+#         filed = list()
+#         if (not data.get('barcode')) or data['barcode'] == '0':
+#             continue
+#         filed.append(data['barcode'])
+#         local_time = time.localtime(data['create_time'])
+#         filed.append(time.strftime("%Y-%m-%d %H:%M:%S", local_time))
+#         y_m_d = time.strftime("%Y-%m-%d", local_time)
+#         hour = local_time.tm_hour
+#         if hour % 2 == 1:
+#             filed.append('%s %02d:00-%d:00' % (y_m_d, hour - 1, hour + 1))
+#         else:
+#             filed.append('%s %02d:00-%d:00' % (y_m_d, hour, hour + 2))
+#         judge_res = data['status']
+#         for i in judge_res:
+#             if i['by'] == 'AI':
+#                 filed.append(i['result'])
+#                 assert len(filed) == 4
+#             if i['by'] == 'OP':
+#                 filed.append(i['result'])
+#                 assert len(filed) == 5
+#         filed.append(data.get('ap_result') if data.get('ap_result') else 'N/A')  # ap 判定结果
+#         el_no = data['el_no']
+#         filed.append(el_no)  # 扫码机台
+#         filed.append(data['times_of_storage'])  # 组件测试次数
+#         filed.append(data.get('mes_res') if data.get('mes_res') else '暂无')
+#         filed.append(data.get('stack_equipment') if data.get('stack_equipment') else '暂无')
+#
+#         # --------------------------------------------------> 不变
+#
+#         el_no_series = el_no[-1]
+#         cell_amount = data['cell_amount']
+#         flag = True if el_no_series in ['1', '2', '3'] else False
+#         filed_res = filed[:]
+#         # 不良原因 和 不良位置
+#         many_cracks = dict()
+#         many_cracks_op = dict()
+#         ai_position = list()
+#         if not data['defects']:
+#             li = combine_list(filed, 'N/A', 'N/A', 'N/A', 'N/A')
+#             csv_data.append(li)
+#             continue
+#
+#         for defect in data['defects']:
+#             if defect['by'] == 'AI':
+#                 ai_position.append(defect['position']['c'])
+#         for defect in data['defects']:
+#             if defect["by"] == 'OP' and defect['position']['c'] not in ai_position:
+#                 form = defect['type']
+#                 form = info_map['EL_CODE'][form]
+#                 position = defect['position']["c"]
+#                 key = f'{form}#{position}'
+#                 if not many_cracks_op.get(key):
+#                     many_cracks_op[key] = 0
+#                 many_cracks_op[key] += 1
+#
+#             if defect['by'] != 'AI':
+#                 continue
+#             form = defect['type']
+#             form = info_map['EL_CODE'][form]
+#             position = defect['position']["c"]
+#             position = convert_coord(flag, position, cell_amount)
+#             deleted = 'Y' if defect["status"] == 'true' else 'N'
+#             key = f'{form}#{position}#{deleted}'
+#             if not many_cracks.get(key):
+#                 many_cracks[key] = 0
+#             many_cracks[key] += 1
+#
+#         for key, value in many_cracks.items():
+#             char_li = key.split('#')
+#             if char_li[0] == 'NG隐裂':
+#                 char_li.append(value)
+#             else:
+#                 char_li.append('N/A')
+#             filed_temp = filed[:]
+#             filed_temp += char_li
+#             csv_data.append(filed_temp)
+#
+#         for key, value in many_cracks_op.items():
+#             char_li = key.split('#')
+#             if char_li[0] == 'NG隐裂':
+#                 char_li.append('N/A')
+#                 char_li.append(value)
+#             else:
+#                 char_li.append('N/A')
+#                 char_li.append('N/A')
+#             filed_temp = filed[:]
+#             filed_temp += char_li
+#             csv_data.append(filed_temp)
+#
+#         # appearance defect
+#         if data.get('ap_defects'):
+#             for key, values in data['ap_defects'].items():
+#                 if values:
+#                     for value in values:
+#                         filed_temp = filed_res[:]
+#                         li = combine_list(filed_temp, info_map["VI_CODE"][key], value, 'N/A', 'N/A')
+#                         csv_data.append(li)
+#
+#     write_file(csv_data, st_str + ' ' + et_str)
+#
+#     return True
 
-        # --------------------------------------------------> 不变
 
-        el_no_series = el_no[-1]
-        cell_amount = data['cell_amount']
-        flag = True if el_no_series in ['1', '2', '3'] else False
-        filed_res = filed[:]
-        # 不良原因 和 不良位置
-        many_cracks = dict()
-        many_cracks_op = dict()
-        ai_position = list()
-        if not data['defects']:
-            li = combine_list(filed, 'N/A', 'N/A', 'N/A', 'N/A')
-            # filed.append('N/A')  # 不良原因
-            # filed.append('N/A')
-            # filed.append('N/A')  # 人工删减
-            # filed.append('N/A')  # 单一电池隐裂数目
-            csv_data.append(li)
-            continue
+def make_reports(url, st, et, st_str, et_str):
 
-        for defect in data['defects']:
-            if defect['by'] == 'AI':
-                ai_position.append(defect['position']['c'])
-        for defect in data['defects']:
-            if defect["by"] == 'OP' and defect['position']['c'] not in ai_position:
-                form = defect['type']
-                form = info_map['EL_CODE'][form]
-                position = defect['position']["c"]
-                key = f'{form}#{position}'
-                if not many_cracks_op.get(key):
-                    many_cracks_op[key] = 0
-                many_cracks_op[key] += 1
-
-            if defect['by'] != 'AI':
-                continue
-            form = defect['type']
-            form = info_map['EL_CODE'][form]
-            position = defect['position']["c"]
-            position = convert_coord(flag, position, cell_amount)
-            deleted = 'Y' if defect["status"] == 'true' else 'N'
-            key = f'{form}#{position}#{deleted}'
-            if not many_cracks.get(key):
-                many_cracks[key] = 0
-            many_cracks[key] += 1
-
-        for key, value in many_cracks.items():
-            char_li = key.split('#')
-            if char_li[0] == 'NG隐裂':
-                char_li.append(value)
-            else:
-                char_li.append('N/A')
-            filed_temp = filed[:]
-            filed_temp += char_li
-            csv_data.append(filed_temp)
-
-        for key, value in many_cracks_op.items():
-            char_li = key.split('#')
-            if char_li[0] == 'NG隐裂':
-                char_li.append('N/A')
-                char_li.append(value)
-            else:
-                char_li.append('N/A')
-                char_li.append('N/A')
-            filed_temp = filed[:]
-            filed_temp += char_li
-            csv_data.append(filed_temp)
-
-        # appearance defect
-        for key, values in data['ap_defects'].items():
-            if values:
-                for value in values:
-                    filed_temp = filed_res[:]
-                    li = combine_list(filed_temp, info_map["VI_CODE"][key], value, 'N/A', 'N/A')
-                    csv_data.append(li)
-
-    write_file(csv_data, st_str + ' ' + et_str)
-
-    return True
+    csv_data = send_http(url, st, et)
+    if csv_data:
+        write_file(csv_data, st_str + ' ' + et_str)
+        return True
+    else:
+        return False
 
 
 if __name__ == '__main__':
-    make_report('2019-8-31', '2020-2-2')
+    make_reports(1579150000, 1579159685, '2019-8-31', '2020-2-2')
     # load_config()
