@@ -29,9 +29,10 @@ class LogGui(QWidget, Ui_Form):
         self.current_le = cur_obj
 
     def gen_csv(self):
+        self.gen_btn.setStyleSheet('background-color: rgb(127,127,127)')
+        self.gen_btn.setEnabled(False)
         start_time_str = self.st_le.text()
         end_time_str = self.ed_le.text()
-        self.gen_btn.setDisabled(True)
 
         if start_time_str:
             try:

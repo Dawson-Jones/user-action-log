@@ -1,5 +1,3 @@
-import time
-import yaml
 import requests
 import json
 from gen_csv import write_file
@@ -62,10 +60,9 @@ def load_config():
     return info_map
 
 
-def send_http(st, et):
+def send_http(url, st, et):
     try:
-        # response = requests.get('http://192.168.1.4:8091/report', params={"start_time": st, 'end_time': et})
-        response = requests.get('http://192.168.1.15:5000/report', params={"start_time": st, 'end_time': et})
+        response = requests.get('http://{}:5000/report'.format(url), params={"start_time": st, 'end_time': et})
     except:
         return False
     if response.status_code != 200:
@@ -76,7 +73,6 @@ def send_http(st, et):
 
     if origin_data.get("errno") != '0':
         return False
-    print(origin_data.get('msg'))
     return origin_data.get('msg')
 
 
@@ -208,9 +204,9 @@ def send_http(st, et):
 #     return True
 
 
-def make_reports(st, et, st_str, et_str):
+def make_reports(url, st, et, st_str, et_str):
 
-    csv_data = send_http(st, et)
+    csv_data = send_http(url, st, et)
     if csv_data:
         write_file(csv_data, st_str + ' ' + et_str)
         return True

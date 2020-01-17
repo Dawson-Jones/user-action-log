@@ -1,3 +1,4 @@
+import json
 import threading
 import sys
 from log_gui import LogGui
@@ -10,7 +11,12 @@ flag = False
 
 def make_report_res(st, et, st_str, et_str):
     global flag
-    if make_reports(st, et, st_str, et_str):
+    with open('config.json') as f:
+        config = json.load(f)
+    url = config.get('url')
+    if not url:
+        window.gen_failed()
+    if make_reports(url, st, et, st_str, et_str):
         flag = True
     else:
         pass
