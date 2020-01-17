@@ -62,7 +62,7 @@ def load_config():
 
 def send_http(url, st, et):
     try:
-        response = requests.get('http://{}:5000/report'.format(url), params={"start_time": st, 'end_time': et})
+        response = requests.get('http://{}/report'.format(url), params={"start_time": st, 'end_time': et})
     except:
         return False
     if response.status_code != 200:
