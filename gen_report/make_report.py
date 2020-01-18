@@ -79,7 +79,7 @@ def send_http(url, st, et):
 def make_reports(url, st, et, st_str, et_str):
     csv_data = send_http(url, st, et)
     if csv_data:
-        write_file(csv_data, st_str + ' ' + et_str)
+        write_file(csv_data, st_str.replace(':', '#') + ' ' + et_str.replace(':', '#'))
         return True
     else:
         return False

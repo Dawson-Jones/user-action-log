@@ -12,6 +12,7 @@ class ReportGui(QWidget, Ui_Form):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('生成报表工具')
+        self.resize(500, 344)
         self.center()
         current_time = time.time()
         str_time = time.strftime('%Y-%m-%d', time.localtime(current_time - 3600 * 24))
